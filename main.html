@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+
+<html>
+
+
+<script>
+var scale
+var timestep
+var running
+var drawing
+var grid
+var canvas
+var context
+var shiftX
+var shiftY
+
+function XYToString([x, y]) {
+	return `${x},${y}`
+}
+
+function StringToXY(s) {
+	return s.split(",").map(Number)
+}
+
+function neighbours(point) {
+	let [x, y] = StringToXY(point)
+	return [
+		[x-1, y+1], [x, y+1], [x+1, y+1],
+		[x-1, y],             [x+1, y],
+		[x-1, y-1], [x, y-1], [x+1, y-1],
+	].map(XYToString)
+}
+
+function neighbourCounters(grid) {
+	let counters = new Map()
+	for (let point of grid) {
+		counters.set(point, 0)
+		for (let neigh of neighbours(point)) {
+			if (grid.has(neigh)) {
+				counters.set(point, counters.get(point) + 1)
+			} else {
+				counters.set(neigh, (counters.get(neigh) || 0) + 1)
+			}
+		}
+	}
+	return counters
+}
+
+function GOLStep() {
+	for (let [point, counter] of neighbourCounters(grid)) {
+		if (grid.has(point) && (counter < 2 || counter > 3)) {
+			grid.delete(point)
+		} else if (!grid.has(point) && counter == 3) {
+			grid.add(point)
+		}
+	}
+}
+
+function drawGrid() {
+	context.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height)
+	context.fillStyle = "red"
+	context.beginPath()
+	for (let point of grid) {
+		let [x, y] = StringToXY(point)
+		context.fillRect((x+shiftX)*scale, (y+shiftY)*scale, scale, scale)
+	}
+	context.lineWidth = 0.5
+	for (let i = 0; i*scale < canvas.width/2; i++) {
+		context.moveTo(i*scale, -canvas.height/2)
+		context.lineTo(i*scale, canvas.height/2)
+		if (i == 0) continue
+		context.moveTo(-i*scale, -canvas.height/2)
+		context.lineTo(-i*scale, canvas.height/2)
+	}
+	for (let i = 0; i*scale < canvas.height/2; i++) {
+		context.moveTo(-canvas.width/2, i*scale)
+		context.lineTo(canvas.width/2, i*scale)
+		if (i == 0) continue
+		context.moveTo(-canvas.width/2, -i*scale)
+		context.lineTo(canvas.width/2, -i*scale)
+	}
+	context.stroke()
+}
+
+function update() {
+	if (!running) return
+	GOLStep()
+	drawGrid()
+}
+
+function onKeyDown(event) {
+	switch (event.code) {
+		case "Enter":
+			running = !running
+			break
+		case "Minus":
+			scale = scale-1 > 1 ? scale-1 : 1
+			resetCanvas()
+			break
+		case "Equal":
+			scale += 1
+			resetCanvas()
+			break
+		case "ArrowLeft":
+			shiftX += 5
+			resetCanvas()
+			break
+		case "ArrowRight":
+			shiftX -= 5
+			resetCanvas()
+			break
+		case "ArrowUp":
+			shiftY += 5
+			resetCanvas()
+			break
+		case "ArrowDown":
+			shiftY -= 5
+			resetCanvas()
+			break
+	}
+}
+
+function onMouseMove(event) {
+	if (!drawing) return
+	let point = XYToString([
+		Math.floor((event.offsetX - canvas.width/2) / scale) - shiftX,
+		Math.floor((event.offsetY - canvas.height/2) / scale) - shiftY
+	])
+	if (event.shiftKey) {
+		grid.delete(point)
+	} else {
+		grid.add(point)
+	}
+	drawGrid()
+}
+
+function onMouseDown(event) {
+	drawing = true
+	onMouseMove(event)
+}
+
+function onMouseUp(event) {
+	drawing = false
+}
+
+function init() {
+	// environment setup
+	scale = 20
+	timestep = 100
+	running = false
+	drawing = false
+	shiftX = 0
+	shiftY = 0
+	grid = new Set()
+	canvas = document.getElementById("GOL")
+	context = canvas.getContext("2d")
+
+	// handlers
+	window.onresize = resetCanvas
+	document.addEventListener("keydown", onKeyDown)
+	canvas.addEventListener("mouseup", onMouseUp)
+	canvas.addEventListener("mousedown", onMouseDown)
+	canvas.addEventListener("mousemove", onMouseMove)
+
+	// run
+	resetCanvas()
+	setInterval(update, timestep)
+}
+
+function resetCanvas(event) {
+	canvas.width = window.innerWidth
+	canvas.height = window.innerHeight
+	context.translate(canvas.width/2, canvas.height/2)
+	drawGrid()
+}
+
+window.onload = init
+</script>
+
+
+<body>
+<canvas id="GOL"/>
+</body>
+
+
+<style>
+body {
+	padding: 0px 0px 0px 0px;
+	margin: 0px 0px 0px 0px;
+}
+</style>
+
+
+</html>
