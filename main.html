@@ -83,6 +83,7 @@ function drawGrid() {
 }
 
 function update() {
+	setTimeout(update, timestep)
 	if (!running) return
 	GOLStep()
 	drawGrid()
@@ -164,7 +165,7 @@ function init() {
 
 	// run
 	resetCanvas()
-	setInterval(update, timestep)
+	setTimeout(update, timestep)
 }
 
 function resetCanvas(event) {
